@@ -229,7 +229,8 @@
             body: JSON.stringify({
               location: locationData,
               selfie: selfieData,
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              deviceName: navigator.userAgent.includes('Mobile') ? 'Mobile device' : 'Desktop / Laptop'
             })
           });
           if (res.ok) {
